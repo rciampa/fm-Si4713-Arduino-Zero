@@ -17,23 +17,25 @@
 #define RESETPIN 9 //Was pin 12 but WiFi101 shield uses 12
 #define _BV(bit) (1 << (bit))
 
-#define FMSTATION 10230      // 10230 == 102.30 MHz
+#define INIT_FMSTATION 10230      // 10230 == 102.30 MHz
+#define PROP_TX_RDS_PI 0x269F
+int fm_chan;
 Adafruit_Si4713 radio = Adafruit_Si4713(RESETPIN);
 
-char ssid[] = "CSOTTER_2.4"; //  your network SSID (name)
-char pass[] = "Rich1@28";    // your network password (use for WPA, or use as key for WEP)
+char ssid[] = "IoTCSUMB"; //  your network SSID (name)
+char pass[] = "CST395SP";    // your network password (use for WPA, or use as key for WEP)
 int status = WL_IDLE_STATUS;
 // if you don't want to use DNS (and reduce your sketch size)
 // use the numeric IP instead of the name for the server:
 //IPAddress server(74,125,232,128);  // numeric IP for Google (no DNS)
-char server[] = "hosting.otterlabs.org";    // name address for Google (using DNS)
+char server[] = "hosting.otterlabs.org";    // name address for otterlabs.org (using DNS)
 // Initialize the Ethernet client library
 // with the IP address and port of the server
 // that you want to connect to (port 80 is default for HTTP):
 WiFiClient client;
 
 unsigned long lastConnectionTime = 0;            // last time you connected to the server, in milliseconds
-const unsigned long postingInterval = 10L * 1000L; // delay between updates, in milliseconds
+const unsigned long postingInterval = 30L * 1000L; // delay between updates, in milliseconds
 
 
 void setup() {
@@ -59,35 +61,31 @@ void setup() {
   Serial.println("Connected to wifi");
   printWifiStatus();
 
-  radioSetup(FMSTATION);
+  fm_chan = INIT_FMSTATION;
+  radioSetup();
 
+  //radioChannelScan();
 }
 
-
-
 void loop() {
+
+  httpClientRead();
 
   // if ten seconds have passed since your last connection,
   // then connect again and send data:
   if (millis() - lastConnectionTime > postingInterval) {
     httpRequest();
   }
-
   radioStatus();
-
-  // if the server's disconnected, stop the client:
-  if (!client.connected()) {
-    Serial.println();
-    Serial.println("disconnecting from server.");
-    client.stop();
-  }
-
 }
 
+void radioSetup() {
 
-void radioSetup(int freq){
-    Serial.println("CST395 IoT - Micro FM Transmitter");
+  Serial.println("\nCST395 IoT - Micro FM Transmitter");
+  Serial.print("New station: ");
+  Serial.println(fm_chan);
 
+  radio = Adafruit_Si4713(RESETPIN);
   if (! radio.begin()) {  // begin with address 0x63 (CS high default)
     Serial.println("Couldn't find radio?");
     while (1);
@@ -100,10 +98,10 @@ void radioSetup(int freq){
   radio.setTXpower(115);  // dBuV, 88-115 max
 
   Serial.print("\nTuning into ");
-  Serial.print(FMSTATION / 100);
+  Serial.print(fm_chan / 100);
   Serial.print('.');
-  Serial.println(FMSTATION % 100);
-  radio.tuneFM(FMSTATION); // 102.3 mhz
+  Serial.println(fm_chan % 100);
+  radio.tuneFM(fm_chan); // mhz
 
   // This will tell you the status in case you want to read it from the chip
   radio.readTuneStatus();
@@ -115,8 +113,8 @@ void radioSetup(int freq){
   Serial.println(radio.currAntCap);
 
   // begin the RDS/RDBS transmission
-  radio.beginRDS();
-  radio.setRDSstation("CST395-IoT");
+  radio.beginRDS(PROP_TX_RDS_PI);
+  radio.setRDSstation("CST IoT!");
   radio.setRDSbuffer( "Welcome to IoT!");
 
   Serial.println("RDS on!");
@@ -124,19 +122,18 @@ void radioSetup(int freq){
   radio.setGPIOctrl(_BV(1) | _BV(2));  // set GP1 and GP2 to output
 }
 
-void radioChannelScan(){
-    // Uncomment to scan power of entire range from 87.5 to 108.0 MHz
-  /*
-    for (uint16_t f  = 8750; f<10800; f+=10) {
+void radioChannelScan() {
+  // Uncomment to scan power of entire range from 87.5 to 108.0 MHz
+
+  for (uint16_t f  = 8750; f < 10800; f += 10) {
     radio.readTuneMeasure(f);
     Serial.print("Measuring "); Serial.print(f); Serial.print("...");
     radio.readTuneStatus();
     Serial.println(radio.currNoiseLevel);
-    }
-  */
+  }
 }
 
-void radioStatus(){
+void radioStatus() {
   radio.readASQ();
   Serial.print("\tCurr ASQ: 0x");
   Serial.println(radio.currASQ, HEX);
@@ -158,7 +155,7 @@ void httpRequest() {
   if (client.connect(server, 80)) {
     Serial.println("connecting...");
     // send the HTTP PUT request:
-    Serial.println("connecting) send the HTTP PUT request:...");
+    Serial.println("connecting send the HTTP PUT request:...");
     client.println("GET /lockwoodbrandane/public_html/fm/micro-fm-webservice/mfm-service.php?method=getFreq&transID=l234u832u48932u4&q=1000&format=html HTTP/1.1");
     client.println("Host: hosting.otterlabs.org");
     client.println("User-Agent: ArduinoWiFi/1.1");
@@ -172,16 +169,43 @@ void httpRequest() {
     // if you couldn't make a connection:
     Serial.println("connection failed");
   }
+
+  // if the server's disconnected, stop the client:
+  if (!client.connected()) {
+    Serial.println();
+    Serial.println("disconnecting from server.");
+    client.stop();
+  }
 }
 
-void httpClientRead(){
-    // if there's incoming data from the net connection.
+void httpClientRead() {
+
+
+  char c[5] = "", h;
+  uint8_t i = 0;
+  bool isFreq = false;
+  // if there's incoming data from the net connection.
   // send it out the serial port.  This is for debugging
   // purposes only:
   while (client.available()) {
-    char c = client.read();
-    Serial.write(c);
-    radioSetup(atoi(c));
+    if (isFreq)
+    {
+      c[i] = client.read();
+      Serial.print(c[i]);
+      i++;
+    } else {
+      h = client.read();
+      Serial.print(h);
+    }
+    if (h == '#') {
+      isFreq = true;
+    }
+  }
+  if (isFreq) {
+    if (!(fm_chan == atoi(c))) {
+      fm_chan = atoi(c);
+      radioSetup();
+    }
   }
 }
 
@@ -201,5 +225,3 @@ void printWifiStatus() {
   Serial.print(rssi);
   Serial.println(" dBm");
 }
-
-
