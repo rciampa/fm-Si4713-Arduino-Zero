@@ -1,29 +1,20 @@
-/***************************************************
-  This is an example for the Si4713 FM Radio Transmitter with RDS
-
-  Designed specifically to work with the Si4713 breakout in the
-  adafruit shop
-  ----> https://www.adafruit.com/products/1958
-
-  These transmitters use I2C to communicate, plus reset pin.
-  3 pins are required to interface
-  Adafruit invests time and resources providing this open source code,
-  please support Adafruit and open-source hardware by purchasing
-  products from Adafruit!
-
-  Written by Limor Fried/Ladyada for Adafruit Industries.
-  BSD license, all text above must be included in any redistribution
-
-  Many thx to https://github.com/phrm/fmtx/blob/master/firmware/firmware.ino !
-
- ****************************************************/
+/*
+ * This is an example for the Si4713 FM Radio Transmitter with RDS
+ *
+ * Designed to work with the Si4713 in the adafruit shop
+ *
+ * These transmitters use I2C to communicate, plus reset pin.
+ * 3 pins are required to interface
+ *
+ * Written by Richard Ciampa, Brandan Lockwood.
+ */
 
 #include <Wire.h>
 #include <Adafruit_Si4713.h>
 #include <SPI.h>
 #include <WiFi101.h>
 
-#define RESETPIN 9 //Was pin 12 but WiFi shield uses 12
+#define RESETPIN 9 //Was pin 12 but WiFi101 shield uses 12
 #define _BV(bit) (1 << (bit))
 
 #define FMSTATION 10230      // 10230 == 102.30 MHz
