@@ -1,13 +1,13 @@
 /*
- * This is an example for the Si4713 FM Radio Transmitter with RDS
- *
- * Designed to work with the Si4713 in the adafruit shop
- *
- * These transmitters use I2C to communicate, plus reset pin.
- * 3 pins are required to interface
- *
- * Written by Richard Ciampa, Brandan Lockwood.
- */
+   This is an example for the Si4713 FM Radio Transmitter with RDS
+
+   Designed to work with the Si4713 in the adafruit shop
+
+   These transmitters use I2C to communicate, plus reset pin.
+   3 pins are required to interface
+
+   Written by Richard Ciampa, Brandan Lockwood.
+*/
 
 #include <Wire.h>
 #include <Adafruit_Si4713.h>
@@ -24,18 +24,13 @@
 
 int fm_chan;
 Adafruit_Si4713 radio = Adafruit_Si4713(RESET_PIN);
-
-char ssid[] = "IoTCSUMB"; //  your network SSID (name)
-char pass[] = "CST395SP";    // your network password (use for WPA, or use as key for WEP)
+char ssid[] = "IoTCSUMB";                //Network SSID (name)
+char pass[] = "CST395SP";                //Network password (use for WPA, or use as key for WEP)
 int status = WL_IDLE_STATUS;
-char server[] = "hosting.otterlabs.org";    // name address for otterlabs.org (using DNS)
-// Initialize the Ethernet client library
-// with the IP address and port of the server
-// that you want to connect to (port 80 is default for HTTP):
-WiFiClient client;
-
-unsigned long lastConnectionTime = 0;            // last time you connected to the server, in milliseconds
-const unsigned long postingInterval = 30L * 1000L; // delay between updates, in milliseconds
+char server[] = "hosting.otterlabs.org"; //FQDN for otterlabs.org (using DNS)
+WiFiClient client;                       // Initialize client (port 80 default HTTP):
+unsigned long lastConnectionTime = 0;    // last time you connected to the server, in milliseconds
+const unsigned long postingInterval = 6L * 60000L; // delay between updates, in milliseconds
 
 
 void setup() {
@@ -57,7 +52,7 @@ void setup() {
     // wait 10 seconds for connection:
     delay(10000);
   }
-  
+
   Serial.println("Connected to wifi");
   printWifiStatus();
 
@@ -69,18 +64,17 @@ void setup() {
 void loop() {
 
   httpClientRead();
-
+  radioStatus();
   // if ten seconds have passed since your last connection,
   // then connect again and send data:
   if (millis() - lastConnectionTime > postingInterval) {
     httpRequest();
   }
-  radioStatus();
 }
 
 void radioSetup() {
 
-  Serial.println("\nCST395 IoT - Micro FM Transmitter");
+  Serial.println("\n------------ FM TX Setup ------------\nCST395 IoT - Micro FM Transmitter");
   Serial.print("New station: ");
   Serial.println(fm_chan);
 
@@ -103,9 +97,9 @@ void radioSetup() {
   radio.readTuneStatus();
   Serial.print("\tCurr freq: ");
   Serial.println(radio.currFreq);
-  Serial.print("\tCurr freqdBuV:");
+  Serial.print("\tCurr freq dBuV:");
   Serial.println(radio.currdBuV);
-  Serial.print("\tCurr ANTcap:");
+  Serial.print("\tCurr ANT cap:");
   Serial.println(radio.currAntCap);
 
   // begin the RDS/RDBS transmission
@@ -113,26 +107,28 @@ void radioSetup() {
   radio.setRDSstation("CST IoT!");
   radio.setRDSbuffer( "Welcome to IoT!");
 
-  Serial.println("RDS on!");
+  Serial.println("RDS on!\n-----------------------------------\n");
 
   radio.setGPIOctrl(_BV(1) | _BV(2));  // set GP1 and GP2 to output
 }
 
 void radioChannelScan() {
-  //scan power of entire range from 87.5 to 108.0 MHz
+  Serial.println("\n--------------- FM Rx Scan ---------------");
+  //Scan power of entire range from 87.5 to 108.0 MHz
   for (uint16_t f  = FM_FREQ_LOW; f < FM_FREQ_HIGH; f += FM_FREQ_STEP) {
     radio.readTuneMeasure(f);
     Serial.print("Measuring: "); Serial.print(f); Serial.print("...");
     radio.readTuneStatus();
     Serial.println(radio.currNoiseLevel);
   }
+  Serial.println("------------------------------------------");
 }
 
 void radioStatus() {
   radio.readASQ();
   Serial.print("\tCurr ASQ: 0x");
   Serial.println(radio.currASQ, HEX);
-  Serial.print("\tCurr InLevel:");
+  Serial.print("\tAudio Input Level: ");
   Serial.println(radio.currInLevel);
   // toggle GPO1 and GPO2
   radio.setGPIO(_BV(1));
@@ -148,7 +144,7 @@ void httpRequest() {
 
   // if there's a successful connection:
   if (client.connect(server, 80)) {
-    Serial.println("connecting...");
+    Serial.println("\n---------------------------------\nConnecting...");
     // send the HTTP PUT request:
     Serial.println("connecting send the HTTP PUT request:...");
     client.println("GET /lockwoodbrandane/public_html/fm/micro-fm-webservice/mfm-service.php?method=getFreq&transID=l234u832u48932u4&q=1000&format=html HTTP/1.1");
@@ -156,6 +152,12 @@ void httpRequest() {
     client.println("User-Agent: ArduinoWiFi/1.1");
     client.println("Connection: close");
     client.println();
+    Serial.println("----------- Response ------------");
+
+    Serial.print("Loading buffer: ");
+    while (!client.available());
+    Serial.print(client.available());
+    Serial.println(" length");
 
     // note the time that the connection was made:
     lastConnectionTime = millis();
@@ -202,6 +204,8 @@ void httpClientRead() {
     if (!(fm_chan == atoi(c))) {
       fm_chan = atoi(c);
       radioSetup();
+    } else {
+      Serial.println("\n--------------------------------------");
     }
   }
 }
