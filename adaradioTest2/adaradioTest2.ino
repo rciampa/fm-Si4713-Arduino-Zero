@@ -14,13 +14,16 @@
 #include <SPI.h>
 #include <WiFi101.h>
 
-#define RESETPIN 9 //Was pin 12 but WiFi101 shield uses 12
+#define RESET_PIN 9               //Was pin 12 but WiFi101 shield uses 12
 #define _BV(bit) (1 << (bit))
-
 #define INIT_FMSTATION 10230      // 10230 == 102.30 MHz
-#define PROP_TX_RDS_PI 0x269F
+#define PROP_TX_RDS_PI 0x269F     // RDS program ID KIOT
+#define FM_FREQ_LOW 8750          // 87.50 MHZ
+#define FM_FREQ_HIGH 10800        // 108.00 MHZ
+#define FM_FREQ_STEP 10           // 10 MHZ step
+
 int fm_chan;
-Adafruit_Si4713 radio = Adafruit_Si4713(RESETPIN);
+Adafruit_Si4713 radio = Adafruit_Si4713(RESET_PIN);
 
 char ssid[] = "IoTCSUMB"; //  your network SSID (name)
 char pass[] = "CST395SP";    // your network password (use for WPA, or use as key for WEP)
@@ -51,17 +54,16 @@ void setup() {
     Serial.println(ssid);
     // Connect to WPA/WPA2 network. Change this line if using open or WEP network:
     status = WiFi.begin(ssid, pass);
-
     // wait 10 seconds for connection:
     delay(10000);
   }
+  
   Serial.println("Connected to wifi");
   printWifiStatus();
 
   fm_chan = INIT_FMSTATION;
   radioSetup();
-
-  //radioChannelScan();
+  radioChannelScan();
 }
 
 void loop() {
@@ -82,14 +84,11 @@ void radioSetup() {
   Serial.print("New station: ");
   Serial.println(fm_chan);
 
-  radio = Adafruit_Si4713(RESETPIN);
+  radio = Adafruit_Si4713(RESET_PIN);
   if (! radio.begin()) {  // begin with address 0x63 (CS high default)
     Serial.println("Couldn't find radio?");
     while (1);
   }
-
-  // Uncomment to scan power of entire range from 87.5 to 108.0 MHz
-  //radioChannelScan();
 
   Serial.print("\nSet TX power");
   radio.setTXpower(115);  // dBuV, 88-115 max
@@ -120,11 +119,10 @@ void radioSetup() {
 }
 
 void radioChannelScan() {
-  // Uncomment to scan power of entire range from 87.5 to 108.0 MHz
-
-  for (uint16_t f  = 8750; f < 10800; f += 10) {
+  //scan power of entire range from 87.5 to 108.0 MHz
+  for (uint16_t f  = FM_FREQ_LOW; f < FM_FREQ_HIGH; f += FM_FREQ_STEP) {
     radio.readTuneMeasure(f);
-    Serial.print("Measuring "); Serial.print(f); Serial.print("...");
+    Serial.print("Measuring: "); Serial.print(f); Serial.print("...");
     radio.readTuneStatus();
     Serial.println(radio.currNoiseLevel);
   }
