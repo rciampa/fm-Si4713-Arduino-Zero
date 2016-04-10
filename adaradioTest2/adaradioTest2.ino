@@ -35,8 +35,8 @@ const unsigned long postingInterval = 6L * 60000L; // delay between updates, in 
 
 void setup() {
   Serial.begin(9600);
+  
   // check for the presence of the shield:
-
   if (WiFi.status() == WL_NO_SHIELD) {
     Serial.println("WiFi shield not present");
     // don't continue:
@@ -52,7 +52,6 @@ void setup() {
     // wait 10 seconds for connection:
     delay(10000);
   }
-
   Serial.println("Connected to wifi");
   printWifiStatus();
 
@@ -62,7 +61,6 @@ void setup() {
 }
 
 void loop() {
-
   httpClientRead();
   radioStatus();
   // if ten seconds have passed since your last connection,
@@ -73,7 +71,6 @@ void loop() {
 }
 
 void radioSetup() {
-
   Serial.println("\n------------ FM TX Setup ------------\nCST395 IoT - Micro FM Transmitter");
   Serial.print("New station: ");
   Serial.println(fm_chan);
@@ -86,7 +83,6 @@ void radioSetup() {
 
   Serial.print("\nSet TX power");
   radio.setTXpower(115);  // dBuV, 88-115 max
-
   Serial.print("\nTuning into ");
   Serial.print(fm_chan / 100);
   Serial.print('.');
@@ -106,9 +102,7 @@ void radioSetup() {
   radio.beginRDS(PROP_TX_RDS_PI);
   radio.setRDSstation("CST IoT!");
   radio.setRDSbuffer( "Welcome to IoT!");
-
   Serial.println("RDS on!\n-----------------------------------\n");
-
   radio.setGPIOctrl(_BV(1) | _BV(2));  // set GP1 and GP2 to output
 }
 
@@ -152,14 +146,14 @@ void httpRequest() {
     client.println("User-Agent: ArduinoWiFi/1.1");
     client.println("Connection: close");
     client.println();
+    
     Serial.println("----------- Response ------------");
-
     Serial.print("Loading buffer: ");
     while (!client.available());
     Serial.print(client.available());
     Serial.println(" length");
 
-    // note the time that the connection was made:
+    //time connection was made:
     lastConnectionTime = millis();
   }
   else {
@@ -176,8 +170,6 @@ void httpRequest() {
 }
 
 void httpClientRead() {
-
-
   char c[5] = "", h;
   uint8_t i = 0;
   bool isFreq = false;
