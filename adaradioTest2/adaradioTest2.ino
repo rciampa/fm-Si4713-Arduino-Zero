@@ -9,21 +9,21 @@
    Written by Richard Ciampa, Brandan Lockwood.
 */
 
-#include <Wire.h>
 #include <Adafruit_Si4713.h>
 #include <SPI.h>
 #include <WiFi101.h>
+#include <Wire.h>
 
-#define RESET_PIN 9               //Was pin 12 but WiFi101 shield uses 12
 #define _BV(bit) (1 << (bit))
-#define INIT_FMSTATION 10230      // 10230 == 102.30 MHz
-#define PROP_TX_RDS_PI 0x269F     // RDS program ID KIOT
 #define FM_FREQ_LOW 8750          // 87.50 MHZ
 #define FM_FREQ_HIGH 10800        // 108.00 MHZ
 #define FM_FREQ_STEP 10           // 10 MHZ step
+#define INIT_FMSTATION 10230      // 10230 == 102.30 MHz
+#define PROP_TX_RDS_PI 0x269F     // RDS program ID KIOT
+#define RESET_PIN 9               //Was pin 12 but WiFi101 shield uses 12
 
 int fm_chan;
-Adafruit_Si4713 radio = Adafruit_Si4713(RESET_PIN);
+Adafruit_Si4713 radio;
 char ssid[] = "IoTCSUMB";                //Network SSID (name)
 char pass[] = "CST395SP";                //Network password (use for WPA, or use as key for WEP)
 int status = WL_IDLE_STATUS;
